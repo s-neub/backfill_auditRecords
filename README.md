@@ -71,11 +71,6 @@ backfill_auditRecords/
 ├── preflight.py                              # Step 1-4: Non-destructive preflight
 ├── backfill_storedModel_auditRecords.py      # Step 2-4: Actual backfill (POST/PATCH)
 │
-├── json_responses/                           # Example API responses (reference)
-│   ├── response_model-manage_api_storedModels_search_findProductionUseCases.json
-│   ├── response_model-manage_api_modelMLCs_search_findAllByStoredModelId_*.json
-│   └── response_model-manage_api_auditRecords_search_*.json
-│
 └── Generated Outputs (after running scripts)
     ├── preflight_storedmodels.csv            # Production StoredModels snapshot
     ├── preflight_mlcs.csv                    # MLC workflow execution history
@@ -520,7 +515,6 @@ For each production StoredModel:
 | `.gitignore` | Protects `.env` and output CSVs from version control |
 | `requirements.txt` | Python package dependencies |
 | `.vscode/settings.json` | VS Code integrated terminal configuration |
-| `json_responses/` | Example API response files (reference only) |
 
 ### Auto-Generated Files
 
