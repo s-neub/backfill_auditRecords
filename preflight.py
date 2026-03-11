@@ -260,7 +260,7 @@ def fetch_model_mlcs_for_stored_model(
     base_url: str, session: requests.Session, stored_model_id: str, group: str
 ) -> List[Dict]:
     """
-    Step 3: For each StoredModel, call GET /api/modelMLCs/search/findAllByStoredModelIdAndGroupIn
+    Step 3: For each StoredModel, call GET /api/modelMLCs/search/findAllByStoredModelId
     to retrieve workflow execution history.
     """
     logger.debug("Fetching modelMLCs for StoredModel id=%s group=%s...", stored_model_id, group)
@@ -272,7 +272,7 @@ def fetch_model_mlcs_for_stored_model(
         url = f"{base_url}/model-manage/api/modelMLCs/search/findAllByStoredModelIdAndGroupIn"
         params = {
             "storedModelId": stored_model_id,
-            "groups": group,
+            "group": group,
             "page": page,
             "size": PAGE_SIZE,
         }
