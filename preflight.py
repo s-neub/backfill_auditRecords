@@ -5,7 +5,7 @@ Preflight Checks for StoredModel AuditRecords Backfill
 This script conducts a preflight check before running the actual backfill process:
 
 Step 1: Load Configuration
-    - Read authentication credentials from .env file
+    - Read authentication credentials
     - Establish authenticated session to ModelOp Center
 
 Step 2: Discover Production StoredModels
@@ -49,22 +49,22 @@ from dotenv import load_dotenv
 
 load_dotenv(override=False)
 
-MOC_BASE_URL = os.getenv("MOC_BASE_URL", "").strip()
-MOC_USERNAME = os.getenv("MOC_USERNAME", "").strip()
-MOC_PASSWORD = os.getenv("MOC_PASSWORD", "").strip()
-MOC_ACCESS_TOKEN = os.getenv("MOC_ACCESS_TOKEN", "").strip()
+# TODO: Add base url and access token
+# Retrieve configuration from environment or prompt user
+MOC_BASE_URL = "your-base-url".strip() 
+MOC_ACCESS_TOKEN = "your-access-token".strip()
+
 MOC_ACCESS_TOKEN_TIMESTAMP = os.getenv("MOC_ACCESS_TOKEN_TIMESTAMP", "0").strip()
 MOC_TOKEN_REFRESH_INTERVAL_MINUTES = int(os.getenv("MOC_TOKEN_REFRESH_INTERVAL_MINUTES", "30"))
 
-# If any required configuration is missing, prompt the user
-if not MOC_BASE_URL:
-    MOC_BASE_URL = input("Enter ModelOp Center base URL (e.g., https://your-instance.modelop.center): ").strip()
-if not MOC_USERNAME:
-    MOC_USERNAME = input("Enter your ModelOp Center username: ").strip()
-if not MOC_PASSWORD:
-    MOC_PASSWORD = input("Enter your ModelOp Center password: ").strip()
-
-PRODUCTION_MODEL_STAGE_VALUE = os.getenv("PRODUCTION_MODEL_STAGE_VALUE", "prod").strip()
+# TODO: Add production stage value
+# Production model stage value, from SCCS configuration (Step 1 in doc):
+#   modelop:
+#     model-stages:
+#       production-stage: prod
+#
+# NOTE: value is case-sensitive and MUST match your environment.
+PRODUCTION_MODEL_STAGE_VALUE = "Production" 
 
 # Get path to .env file
 ENV_FILE_PATH = os.path.join(os.path.dirname(__file__), ".env")
@@ -225,7 +225,7 @@ def discover_production_storedmodels(base_url: str, session: requests.Session) -
     page = 0
 
     while True:
-        url = f"{base_url}/api/storedModels/search/findProductionUseCases"
+        url = f"{base_url}model-manage/api/storedModels/search/findProductionUseCases"
         params = {"page": page, "size": PAGE_SIZE}
         logger.debug("Requesting production use cases page=%s", page)
 
@@ -269,7 +269,7 @@ def fetch_model_mlcs_for_stored_model(
     page = 0
 
     while True:
-        url = f"{base_url}/api/modelMLCs/search/findAllByStoredModelIdAndGroupIn"
+        url = f"{base_url}/model-manage/api/modelMLCs/search/findAllByStoredModelIdAndGroupIn"
         params = {
             "storedModelId": stored_model_id,
             "groups": group,

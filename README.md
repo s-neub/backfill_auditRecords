@@ -6,11 +6,12 @@
 
 ## Overview
 
-This is a production-ready Python solution for backfilling StoredModel AuditRecords in ModelOp Center 3.4, implementing the process documented in the ModelOp engineering guide: [Backfilling StoredModel AuditRecords Before ModelOp Center 3.4 Upgrade](https://modelop.atlassian.net/wiki/x/BIBbvQ) (requires access permission).
+This is a production-ready Python solution for backfilling StoredModel AuditRecords, model stages, and model business drivers in ModelOp Center 3.4, implementing the process documented in the ModelOp engineering guide: [Backfilling StoredModel AuditRecords Before ModelOp Center 3.4 Upgrade](https://modelop.atlassian.net/wiki/x/BIBbvQ) (requires access permission).
 
 ### The Problem
 
-When upgrading to ModelOp Center 3.4, AuditRecords for StoredModels that were promoted to production *before* the upgrade don't exist. Without these records, your governance dashboard and audit trails are incomplete for those models.
+When upgrading to ModelOp Center 3.4, AuditRecords for StoredModels that were promoted to production *before* the upgrade don't exist. Without these records, your governance dashboard and audit trails are incomplete for those models.  Additionally, any StoredModel records that do not have values set for modelStage and primaryDriver will not appear on the Use Case
+dashboard which leads to number mismatches.
 
 ### The Solution
 
@@ -19,7 +20,6 @@ This toolkit provides:
 - **`preflight.py`** — Non-destructive validation capturing the current state before any modifications
 - **`backfill_storedModel_auditRecords.py`** — Actual backfill using historical MLC workflow end times as production promotion dates
 - **Comprehensive CSV exports** — Enable before/after comparison and audit trail
-- **Enterprise-grade security** — Environment variables, credential caching, no hardcoded secrets
 
 ### Key Innovation
 

@@ -24,6 +24,7 @@ Script goals:
        - Group (Business Unit)
        - Name, modelStage, createdDate, lastModifiedDate
    - Write: production_storedmodels_from_search.csv
+   - Update: StoredModel stage and primary business driver with "unassigned"
 
 2) **Resolve desired production promotion date/time**
    - For each StoredModel from Step 2:
@@ -61,70 +62,23 @@ from dotenv import load_dotenv
 # 1. CONFIGURATION & AUTHENTICATION
 # ==========================================
 
-# --------------------------------------------------
-# LOAD ENVIRONMENT VARIABLES FROM .env FILE
-# --------------------------------------------------
-
 load_dotenv(override=False)  # Load .env file; don't override existing environment variables
 
+# TODO: Add base url and access token
 # Retrieve configuration from environment or prompt user
-MOC_BASE_URL = os.getenv("MOC_BASE_URL", "").strip()
-USERNAME = os.getenv("USERNAME", "").strip()
-PASSWORD = os.getenv("PASSWORD", "").strip()
-MOC_ACCESS_TOKEN = os.getenv("MOC_ACCESS_TOKEN", "").strip()
+MOC_BASE_URL = "your-base-url".strip() 
+MOC_ACCESS_TOKEN = "your-access-token".strip()
 
-# If any required configuration is missing, prompt the user
-if not MOC_BASE_URL:
-    MOC_BASE_URL = input("Enter ModelOp Center base URL (e.g., https://your-instance.modelop.center): ").strip()
-if not USERNAME:
-    USERNAME = input("Enter your ModelOp Center username: ").strip()
-if not PASSWORD:
-    PASSWORD = input("Enter your ModelOp Center password: ").strip()
-
+# TODO: Add production stage value
 # Production model stage value, from SCCS configuration (Step 1 in doc):
 #   modelop:
 #     model-stages:
 #       production-stage: prod
 #
 # NOTE: value is case-sensitive and MUST match your environment.
-PRODUCTION_MODEL_STAGE_VALUE = os.getenv("PRODUCTION_MODEL_STAGE_VALUE", "prod").strip()
+PRODUCTION_MODEL_STAGE_VALUE = "Production" 
 
-
-# --------------------------------
-# StoredModel discovery configuration
-# --------------------------------
-
-# We now explicitly use the Step 2 endpoint:
-#   GET /api/storedModels/search/findProductionUseCases
-#
-# This endpoint returns StoredModels / UseCases that are in production.
-# We use this as the authoritative discovery mechanism.
-PRODUCTION_USECASE_SEARCH_PATH = "/api/storedModels/search/findProductionUseCases"
-
-# If, for any reason, the above search endpoint is not available (404),
-# we can optionally FALL BACK to listing all StoredModels via:
-#   GET /model-manage/api/storedModels
-# and then filter locally by modelMetaData.modelStage == PRODUCTION_MODEL_STAGE_VALUE.
-ENABLE_FALLBACK_STOREDMODEL_LISTING = True  # set False to fail hard if search endpoint is missing
-
-
-# --------------------------------
-# MLC search endpoint configuration
-# --------------------------------
-
-# Endpoint you provided for finding MLC executions:
-#   GET /api/modelMLCs/search/findAllByStoredModelIdAndGroupIn
-MODEL_MLC_SEARCH_PATH = "/api/modelMLCs/search/findAllByStoredModelIdAndGroupIn"
-
-# Query parameter names for the MLC search endpoint.
-# These MAY vary per environment; confirm against your actual API docs.
-#
-# Default assumption:
-#   GET /api/modelMLCs/search/findAllByStoredModelIdAndGroupIn
-#       ?storedModelId=<UUID>&groups=<GROUP>&page=0&size=200
-MODEL_MLC_QUERY_PARAM_STORED_MODEL_ID = "storedModelId"  # TODO: confirm with your API
-MODEL_MLC_QUERY_PARAM_GROUPS = "groups"                  # TODO: set to "group" if your API expects "group" instead
-
+#TODO: add production promotion process definition
 # Optional filter: which processDefinitionKeys represent promotion-to-prod workflows.
 #
 # If left empty, the script will:
@@ -136,8 +90,46 @@ PRODUCTION_PROMOTION_PROCESS_DEFINITION_KEYS: List[str] = [
     # EXAMPLES (commented out):
     # "promote-to-prod",
     # "usecase-prod-pipeline",
+    "Update Implementation Stage"
 ]
 
+# --------------------------------
+# StoredModel discovery configuration
+# --------------------------------
+
+# We now explicitly use the Step 2 endpoint:
+#   GET /api/storedModels/search/findProductionUseCases
+#
+# This endpoint returns StoredModels / UseCases that are in production.
+# We use this as the authoritative discovery mechanism.
+PRODUCTION_USECASE_SEARCH_PATH = "/model-manage/api/storedModels/search/findProductionUseCases"
+
+# If, for any reason, the above search endpoint is not available (404),
+# we can optionally FALL BACK to listing all StoredModels via:
+#   GET /model-manage/api/storedModels
+# and then filter locally by modelMetaData.modelStage == PRODUCTION_MODEL_STAGE_VALUE.
+ENABLE_FALLBACK_STOREDMODEL_LISTING = True  # set False to fail hard if search endpoint is missing
+
+# We must also get all use cases so we can fill in primary-driver and modelStage information:
+# GET /api/storedModels
+ALL_STOREDMODEL_PATH = "/model-manage/api/storedModels"
+
+# --------------------------------
+# MLC search endpoint configuration
+# --------------------------------
+
+# Endpoint you provided for finding MLC executions:
+#   GET /api/modelMLCs/search/findAllByStoredModelIdAndGroupIn
+MODEL_MLC_SEARCH_PATH = "/model-manage/api/modelMLCs/search/findAllByStoredModelIdAndGroupIn"
+
+# Query parameter names for the MLC search endpoint.
+# These MAY vary per environment; confirm against your actual API docs.
+#
+# Default assumption:
+#   GET /api/modelMLCs/search/findAllByStoredModelIdAndGroupIn
+#       ?storedModelId=<UUID>&groups=<GROUP>&page=0&size=200
+MODEL_MLC_QUERY_PARAM_STORED_MODEL_ID = "storedModelId"  
+MODEL_MLC_QUERY_PARAM_GROUPS = "group"                  
 
 # --------------------------------
 # CSV OUTPUT LOCATIONS
@@ -145,6 +137,9 @@ PRODUCTION_PROMOTION_PROCESS_DEFINITION_KEYS: List[str] = [
 
 # Step 2 / Initial discovery snapshot:
 PRODUCTION_STOREDMODELS_CSV = "production_storedmodels_from_search.csv"
+
+# All stored models
+ALL_STOREDMODELS_CSV = "all_storedmodels.csv"
 
 # MLC-derived production dates:
 MLC_PRODUCTION_DATES_CSV = "mlc_resolved_production_dates.csv"
@@ -419,12 +414,9 @@ def list_all_stored_models_via_model_manage(
     page_size: int = PAGE_SIZE,
 ) -> List[Dict]:
     """
-    Fallback: list all StoredModels from:
+    List all Use Case StoredModels from:
 
-        GET /model-manage/api/storedModels
-
-    Used only if /api/storedModels/search/findProductionUseCases is
-    unavailable (404) and ENABLE_FALLBACK_STOREDMODEL_LISTING is True.
+        GET /model-manage/api/storedModels/search/inventory?isUseCase=true
 
     Parameters
     ----------
@@ -440,13 +432,13 @@ def list_all_stored_models_via_model_manage(
     List[Dict]
         List of StoredModel JSON objects.
     """
-    logger.info("Fallback — Listing all StoredModels via /model-manage/api/storedModels...")
+    logger.info("Fallback — Listing all StoredModels via /model-manage/api/storedModels/search/inventory...")
     stored_models: List[Dict] = []
     page = 0
 
     while True:
-        url = f"{base_url}/model-manage/api/storedModels"
-        params = {"page": page, "size": page_size}
+        url = f"{base_url}/model-manage/api/storedModels/search/inventory"
+        params = {"isUseCase": "true", "page": page, "size": page_size}
         resp = session.get(url, params=params, timeout=HTTP_TIMEOUT)
         resp.raise_for_status()
         body = resp.json()
@@ -464,7 +456,7 @@ def list_all_stored_models_via_model_manage(
 
         page += 1
 
-    logger.info("Retrieved %d StoredModels via fallback listing.", len(stored_models))
+    logger.info("Retrieved %d StoredModels.", len(stored_models))
     return stored_models
 
 
@@ -508,11 +500,7 @@ def discover_production_storedmodels(
     """
     Step 2 implementation (plus persistence):
 
-    1. Prefer calling:
-         GET /api/storedModels/search/findProductionUseCases
-       to identify StoredModels / UseCases currently in production.
-
-    2. If that endpoint is not available AND ENABLE_FALLBACK_STOREDMODEL_LISTING is True:
+    1. If that endpoint is not available AND ENABLE_FALLBACK_STOREDMODEL_LISTING is True:
          - Call GET /model-manage/api/storedModels
          - Filter by modelMetaData.modelStage == production_stage
 
@@ -546,8 +534,11 @@ def discover_production_storedmodels(
     List[Dict]
         List of StoredModel JSON objects discovered by this step.
     """
+
     try:
         stored_models = list_production_storedmodels_via_search(base_url, session)
+        all_models = list_all_stored_models_via_model_manage(base_url, session)
+
     except FileNotFoundError:
         if not ENABLE_FALLBACK_STOREDMODEL_LISTING:
             logger.error(
@@ -565,6 +556,18 @@ def discover_production_storedmodels(
     if not stored_models:
         logger.warning("No production StoredModels discovered in Step 2.")
         return []
+
+    # add primary driver and model stage values
+    for model in all_models:
+        m = model.get("modelMetaData")
+        if m.get("modelStage") == "":
+            m["modelStage"] = "unassigned"
+        if m.get("useCaseInfo"):
+            if m.get("useCaseInfo").get("business"):
+                if m.get("useCaseInfo").get("business").get("primaryDriver") == "":
+                    m["useCaseInfo"]["business"]["primaryDriver"] = "unassigned"
+        request_body = {"modelMetaData": {"modelStage": m.get("modelStage", "unassigned"), "useCaseInfo": {"business": {"primaryDriver": "unassigned"}}}}
+        a = session.patch(f"{base_url}/model-manage/api/storedModels/{model.get("id")}",data=json.dumps(request_body))
 
     # Build a tabular snapshot.
     rows: List[Dict] = []
@@ -588,7 +591,7 @@ def discover_production_storedmodels(
         len(df),
         csv_path,
     )
-    return stored_models
+    return stored_models, all_models
 
 
 # ==========================================
@@ -1101,7 +1104,7 @@ def backfill_audit_records(
         sm_id = str(row["storedModelId"])
         sm_name = str(row.get("storedModelName", "Unknown Name"))
         group = str(row.get("group", "UNKNOWN_GROUP"))
-        resolved_prod_date = row.get("resolvedProductionDate")
+        resolved_prod_date = row.get("resolvedProductionDate", row.get("storedModelLastModifiedDate"))
         resolved_source = row.get("resolvedProductionSource")
         mlc_id = row.get("mlcId")
         proc_id = row.get("processInstanceId")
@@ -1255,6 +1258,8 @@ def main() -> None:
         production_stage=PRODUCTION_MODEL_STAGE_VALUE,
         csv_path=PRODUCTION_STOREDMODELS_CSV,
     )
+    #print("line 1278" + str(len(targets)))
+    #print(targets[0][0])
     if not targets:
         logger.error(
             "No production StoredModels discovered via Step 2. "
@@ -1266,7 +1271,7 @@ def main() -> None:
     df_mlc = resolve_production_dates_from_mlcs(
         base_url=MOC_BASE_URL,
         session=session,
-        targets=targets,
+        targets=targets[0],
         csv_path=MLC_PRODUCTION_DATES_CSV,
     )
     if df_mlc.empty:
