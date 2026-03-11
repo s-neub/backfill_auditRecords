@@ -225,7 +225,7 @@ def discover_production_storedmodels(base_url: str, session: requests.Session) -
     page = 0
 
     while True:
-        url = f"{base_url}model-manage/api/storedModels/search/findProductionUseCases"
+        url = f"{base_url}/model-manage/api/storedModels/search/findProductionUseCases"
         params = {"page": page, "size": PAGE_SIZE}
         logger.debug("Requesting production use cases page=%s", page)
 
