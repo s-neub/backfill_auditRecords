@@ -496,29 +496,6 @@ def main() -> None:
     """
     global MOC_ACCESS_TOKEN
 
-    # Step 0: Handle authentication and token refresh
-    token_needs_refresh = False
-    
-    if not MOC_ACCESS_TOKEN:
-        logger.info("No access token found. Authenticating with username/password...")
-        token_needs_refresh = True
-    elif is_token_stale(MOC_ACCESS_TOKEN_TIMESTAMP, MOC_TOKEN_REFRESH_INTERVAL_MINUTES):
-        logger.info("Access token is stale. Refreshing...")
-        token_needs_refresh = True
-    else:
-        logger.info("Access token loaded from environment and is fresh.")
-    
-    if token_needs_refresh:
-        try:
-            MOC_ACCESS_TOKEN = authenticate_and_get_token(MOC_BASE_URL, MOC_USERNAME, MOC_PASSWORD)
-            save_token_to_env(MOC_ACCESS_TOKEN)
-            logger.info("New token obtained and saved to .env.")
-            # Reload .env to get updated token timestamp
-            load_dotenv(ENV_FILE_PATH, override=True)
-        except Exception as exc:
-            logger.error("Failed to authenticate: %s", exc)
-            return
-
     # Create authenticated session
     logger.info("Creating authenticated session to %s...", MOC_BASE_URL)
     session = create_authenticated_session(MOC_BASE_URL, MOC_ACCESS_TOKEN)
