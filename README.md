@@ -88,7 +88,7 @@ backfill_auditRecords/
 
 - Python 3.7+
 - Access to ModelOp Center 3.4 API
-- Valid credentials (username/password)
+- Bearer/Access token
 
 ### Environment Variables
 
@@ -96,8 +96,6 @@ The system uses a `.env` file (automatically created on first run) to store:
 
 ```plaintext
 MOC_BASE_URL=https://your-instance.modelop.center
-USERNAME=your_username
-PASSWORD=your_password
 MOC_ACCESS_TOKEN=<cached-oauth2-token>
 PRODUCTION_MODEL_STAGE_VALUE=prod
 ```
@@ -159,8 +157,7 @@ python preflight.py
 
 On first run, the script will prompt for:
 - ModelOp Center base URL
-- Username
-- Password
+- Bearer token
 
 These credentials will be saved to `.env` for future runs and cached token for reuse.
 
