@@ -39,8 +39,6 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 import requests
-from dotenv import load_dotenv
-
 
 # ==========================================
 # CONFIGURATION & AUTHENTICATION
@@ -52,9 +50,6 @@ load_dotenv(override=False)
 # Retrieve configuration from environment or prompt user
 MOC_BASE_URL = "your-base-url".strip() 
 MOC_ACCESS_TOKEN = "your-access-token".strip()
-
-MOC_ACCESS_TOKEN_TIMESTAMP = os.getenv("MOC_ACCESS_TOKEN_TIMESTAMP", "0").strip()
-MOC_TOKEN_REFRESH_INTERVAL_MINUTES = int(os.getenv("MOC_TOKEN_REFRESH_INTERVAL_MINUTES", "30"))
 
 # TODO: Add production stage value
 # Production model stage value, from SCCS configuration (Step 1 in doc):
